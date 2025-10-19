@@ -1,0 +1,298 @@
+import React from "react";
+import { useState, useEffect } from "react";
+import { useAppContext } from "../context/App.context";
+import { assets } from "../assets/assets";
+import ProductCategory from "./ProductCategory";
+const Cart = () => {
+  const {
+    user,
+    products,
+    cartItems,
+    setCartItems,
+    updateCartItem,
+    removeCartItem,
+    GetCartItem,
+    getCartAmount,
+    navigate,
+    removeItemMessage,
+    axios,
+  } = useAppContext();
+
+  const [cartArray, setCartArray] = useState([]);
+  const [address, setAddress] = useState([]);
+  const [showAddress, setShowAddress] = useState(false);
+  const [selectAddress, setSelectAddress] = useState(null);
+  const [paymentOption, setPaymentOption] = useState("COD");
+
+  const getCart = () => {
+    let tempoArray = [];
+    for (const key in cartItems) {
+      const product = products.find((item) => item._id === key);
+      if (!product) continue;
+      product.quantity = cartItems[key];
+      tempoArray.push(product);
+    }
+    setCartArray(tempoArray);
+  };
+
+  //--------------------------get address from DB --------------------------
+  const getUserAddress = async () => {
+    try {
+      const { data } = await axios.get(`api/address/get?userId=${user._id}`);
+      if (data.success) {
+        setAddress(data.addresses);
+        if (data.addresses.length > 0) {
+          setSelectAddress(data.addresses[0]);
+        }
+      } else {
+        console.error(data.message);
+      }
+    } catch (error) {
+      console.error(error.message);
+    }
+  };
+
+  useEffect(() => {
+    if (Array.isArray(products) && products.length > 0 && cartItems) getCart();
+  }, [products, cartItems]);
+
+  useEffect(() => {
+    if (user && user._id) getUserAddress();
+  }, [user]);
+
+  // -------------------------place Order Function--------------------
+  const placeOrder = async () => {
+    try {
+      if (!selectAddress) {
+        alert("please selecet address");
+        return;
+      }
+
+      if (paymentOption === "COD") {
+        const { data } = await axios.post("/api/order/cod", {
+          userId: user._id,
+          items: cartArray.map((item) => ({
+            product: item._id,
+            quantity: item.quantity,
+          })),
+          address: selectAddress._id,
+        });
+        if (data.success) {
+          alert("succesfully");
+          setCartItems({});
+          navigate("/my-orders");
+        } else {
+          console.log(data.message);
+        }
+      }
+    } catch (error) {
+      console.error(error.message);
+    }
+  };
+
+  return products.length > 0 && cartItems ? (
+    <>
+      <div className="h-8  flex items-center justify-center mt-2">
+        {removeItemMessage && (
+          <div className="h-full w-56 border border-gray-200 flex justify-center shadow">
+            <span className="p-1">✅</span>
+            <span className="p-1 font-semibold text-gray-400">
+              {" "}
+              Removed from Cart
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col md:flex-row mt-4 m-8 ">
+        <div className="flex-1 max-w-4xl ">
+          <h1 className="text-3xl font-medium mb-6">
+            Shopping Cart{" "}
+            <span className="text-sm text-primary">
+              {cartArray.length} Items
+            </span>
+          </h1>
+
+          <div className="grid grid-cols-[2fr_1fr_1fr] text-gray-500 text-base font-medium pb-3">
+            <p className="text-left font-semibold text-primary-dull">
+              Product Details
+            </p>
+            <p className="text-center font-semibold text-primary-dull">
+              Subtotal
+            </p>
+            <p className="text-center font-semibold text-yellow-400">Remove</p>
+          </div>
+
+          {cartArray.map((product, index) => (
+            <div
+              key={index}
+              className="hover:bg-green-100  grid grid-cols-[2fr_1fr_1fr] text-gray-500 items-center text-sm md:text-base font-medium m-3"
+            >
+              <div className="flex items-center md:gap-6 gap-3">
+                <div
+                  onClick={() => {
+                    navigate(
+                      `/products/${product.category.toLowerCase()}/${
+                        product._id
+                      }`
+                    );
+                    scrollTo(0, 0);
+                  }}
+                  className="cursor-pointer w-24 h-24 flex items-center justify-center border border-gray-300 rounded overflow-hidden"
+                >
+                  <img
+                    className="max-w-full h-full object-cover"
+                    src={product.image[0]}
+                    alt={product.name}
+                  />
+                </div>
+                <div>
+                  <p className="hidden md:block font-semibold">
+                    {product.name}
+                  </p>
+                  <div className="font-normal text-gray-500/70">
+                    <p>
+                      Weight: <span>{product.weight || "N/A"}</span>
+                    </p>
+                    <div className="flex items-center">
+                      <p>Qty:</p>
+                      <select
+                        className="outline-none"
+                        onChange={(e) =>
+                          updateCartItem(product._id, Number(e.target.value))
+                        }
+                        value={cartItems[product._id]}
+                      >
+                        {Array(
+                          cartItems[product._id] > 9
+                            ? cartItems[product._id]
+                            : 9
+                        )
+                          .fill("")
+                          .map((_, index) => (
+                            <option key={index} value={index + 1}>
+                              {index + 1}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p className="text-center">
+                RS: {product.offerPrice * product.quantity}
+              </p>
+              <button
+                onClick={() => removeCartItem(product._id)}
+                className="cursor-pointer mx-auto"
+              >
+                <img src={assets.remove_icon} alt="remove" />
+              </button>
+              {removeItemMessage && <span></span>}
+            </div>
+          ))}
+
+          <button
+            onClick={() => {
+              navigate("/products");
+              scrollTo(0, 0);
+            }}
+            className="group cursor-pointer flex items-center mt-8 gap-2 text-primary font-medium"
+          >
+            <img
+              className="group-hover:translate-x-1 transition"
+              src={assets.arrow_right_icon_colored}
+              alt="arrow"
+            />
+            Continue Shopping
+          </button>
+        </div>
+
+        <div className="max-w-[360px] w-full bg-gray-100/40 p-5 max-md:mt-16 border border-gray-300/70">
+          <h2 className="text-xl md:text-xl font-medium">Order Summary</h2>
+          <hr className="border-gray-300 my-5" />
+
+          <div className="mb-6">
+            <p className="text-sm font-medium uppercase">Delivery Address</p>
+            <div className="relative flex justify-between items-start mt-2">
+              <p className="text-gray-500">
+                {selectAddress
+                  ? `${selectAddress.street}, ${selectAddress.city}, ${selectAddress.state}, ${selectAddress.country}`
+                  : "No address found"}
+              </p>
+              <button
+                onClick={() => setShowAddress(!showAddress)}
+                className="text-primary hover:underline cursor-pointer"
+              >
+                Change
+              </button>
+              {showAddress && (
+                <div className="absolute top-12 py-1 bg-white border border-gray-300 text-sm w-full">
+                  {address.map((address, index) => (
+                    <p
+                      onClick={() => {
+                        setSelectAddress(address);
+                        setShowAddress(false);
+                      }}
+                      className="text-gray-500 p-2 hover:bg-gray-100"
+                    >
+                      {address.street},{address.city}, {address.state},{" "}
+                      {address.country}
+                    </p>
+                  ))}
+                  <p
+                    onClick={() => navigate("/add-address")}
+                    className="text-primary text-center cursor-pointer p-2 hover:bg-primary/10"
+                  >
+                    Add address
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <p className="text-sm font-medium uppercase mt-6">Payment Method</p>
+
+            <select
+              value={paymentOption}
+              onChange={(e) => setPaymentOption(e.target.value)}
+              className="w-full border border-gray-300 bg-white px-3 py-2 mt-2 outline-none"
+            >
+              <option value="COD">Cash On Delivery</option>
+              <option value="Online">Online Payment</option>
+            </select>
+          </div>
+
+          <hr className="border-gray-300" />
+
+          <div className="text-gray-500 mt-4 space-y-2">
+            <p className="flex justify-between">
+              <span>Price</span>
+              <span>RS: {getCartAmount()}</span>
+            </p>
+            <p className="flex justify-between">
+              <span>Shipping Fee</span>
+              <span className="text-green-600">Free</span>
+            </p>
+            <p className="flex justify-between">
+              <span>Tax (2%)</span>
+              <span>RS: {(getCartAmount() * 2) / 100}</span>
+            </p>
+            <p className="flex justify-between text-lg font-medium mt-3">
+              <span>Total Amount:</span>
+              <span>RS: {getCartAmount() + (getCartAmount() * 2) / 100}</span>
+            </p>
+          </div>
+
+          <button
+            onClick={placeOrder}
+            className="w-full py-3 mt-6 cursor-pointer bg-primary text-white font-medium hover:bg-primary-dull transition"
+          >
+            {paymentOption === "COD" ? "Place Order" : "proceed to checkout"}
+          </button>
+        </div>
+      </div>
+    </>
+  ) : null;
+};
+
+export default Cart;
