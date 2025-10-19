@@ -1,7 +1,7 @@
 import React from "react";
 import { useState } from "react";
-import { assets } from "../../assets/assets";
-import { categories } from "../../assets/assets";
+import { assets } from "../../assets/assets.js";
+import { categories } from "../../assets/assets.js";
 import { useAppContext } from "../../context/App.context";
 
 const AddProduct = () => {
