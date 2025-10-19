@@ -1,5 +1,5 @@
 import React from "react";
-import { assets } from "../assets/assets";
+import { assets } from "../assets/assets.js";
 import { useState } from "react";
 import { useAppContext } from "../context/App.context";
 import App from "./../App";
