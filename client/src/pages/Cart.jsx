@@ -1,7 +1,7 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import { useAppContext } from "../context/App.context";
-import { assets } from "../assets/assets";
+import { assets } from "../assets/assets.js";
 import ProductCategory from "./ProductCategory";
 const Cart = () => {
   const {
